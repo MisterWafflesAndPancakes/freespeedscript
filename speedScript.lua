@@ -228,9 +228,9 @@ return function()
         return training
     end
     
-    ---------------------------------------------------
-    -- Training Loop (with Kick on Stop option)
-    ---------------------------------------------------
+        ---------------------------------------------------
+        -- Training Loop (with Kick on Stop option)
+        ---------------------------------------------------
     local training = false
     
     local function trainingLoop()
@@ -241,8 +241,6 @@ return function()
                 ToggleButton.Text = "Start Training"
                 ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 40, 80)
                 StatusLabel.Text = "Status: Reached Level " .. STOP_LEVEL
-    
-                -- Kick logic (only if enabled in GUI)
                 if kickOnStop then
                     Players.LocalPlayer:Kick("Reached Speed Level " .. STOP_LEVEL .. " — training stopped.")
                 end
@@ -252,28 +250,49 @@ return function()
             -------------------
             -- Bag1 cycle
             -------------------
-            if waitUntilFreeWithTimeout(inUse1, "Bag1", 10) then
-                root.CFrame = torso1.CFrame
-                punch1:FireServer()
-                StatusLabel.Text = "Status: Training Bag1"
-    
-                waitUntilFreeWithTimeout(inUse1, "Bag1", 10)
-                task.wait(0.5)
+            -- Wait until Bag1 is free
+            while inUse1.Value and training do
+                StatusLabel.Text = "Status: Waiting for Bag1"
+                task.wait(0.2)
             end
+    
+            -- Now wait for it to become true (while waiting, teleport + punch)
+            while not inUse1.Value and training do
+                root.CFrame = torso1.CFrame
+                pcall(function() punch1:FireServer() end)
+                StatusLabel.Text = "Status: Using Bag1"
+                task.wait(0.2)
+            end
+    
+            -- While it's true, wait until it goes false again
+            while inUse1.Value and training do
+                task.wait(0.2)
+            end
+    
+            task.wait(0.5) -- small cooldown
     
             if not training then break end
     
             -------------------
             -- Bag2 cycle
             -------------------
-            if waitUntilFreeWithTimeout(inUse2, "Bag2", 10) then
-                root.CFrame = torso2.CFrame
-                punch2:FireServer()
-                StatusLabel.Text = "Status: Training Bag2"
-    
-                waitUntilFreeWithTimeout(inUse2, "Bag2", 10)
-                task.wait(0.5)
+            while inUse2.Value and training do
+                StatusLabel.Text = "Status: Waiting for Bag2"
+                task.wait(0.2)
             end
+    
+            while not inUse2.Value and training do
+                root.CFrame = torso2.CFrame
+                pcall(function() punch2:FireServer() end)
+                StatusLabel.Text = "Status: Using Bag2"
+                task.wait(0.2)
+            end
+    
+            while inUse2.Value and training do
+                task.wait(0.2)
+            end
+    
+            task.wait(0.75)
         end
     end
     
