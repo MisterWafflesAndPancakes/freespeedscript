@@ -252,24 +252,38 @@ return function()
                 break
             end
     
-            -- Bag1
-            while inUse1.Value and training do task.wait(0.2) end
+            -------------------
+            -- Bag1 cycle
+            -------------------
+            -- Wait until Bag1 is free
+            repeat task.wait() until not inUse1.Value or not training
             if not training then break end
+    
+            -- Teleport + punch once
             root.CFrame = torso1.CFrame * CFrame.new(0,0,-3)
             pcall(function() punch1:FireServer() end)
             StatusLabel.Text = "Status: Training Bag1"
-            while inUse1.Value and training do task.wait(0.2) end
+    
+            -- Wait until Bag1 finishes (goes false again)
+            repeat task.wait() until not inUse1.Value or not training
             task.wait(0.5)
     
             if not training then break end
     
-            -- Bag2
-            while inUse2.Value and training do task.wait(0.2) end
+            -------------------
+            -- Bag2 cycle
+            -------------------
+            -- Wait until Bag2 is free
+            repeat task.wait() until not inUse2.Value or not training
             if not training then break end
+    
+            -- Teleport + punch once
             root.CFrame = torso2.CFrame * CFrame.new(0,0,-3)
             pcall(function() punch2:FireServer() end)
             StatusLabel.Text = "Status: Training Bag2"
-            while inUse2.Value and training do task.wait(0.2) end
+    
+            -- Wait until Bag2 finishes (goes false again)
+            repeat task.wait() until not inUse2.Value or not training
             task.wait(0.5)
         end
     end
