@@ -237,7 +237,7 @@ return function()
     ---------------------------------------------------
     -- Training Loop (with Kick on Stop option)
     ---------------------------------------------------
-
+    
     local function trainingLoop()
         while training do
             -- Stop check
@@ -255,36 +255,34 @@ return function()
             -------------------
             -- Bag1 cycle
             -------------------
-            -- Wait until Bag1 is free
             repeat task.wait() until not inUse1.Value or not training
             if not training then break end
     
-            -- Teleport + punch once
             root.CFrame = torso1.CFrame * CFrame.new(0,0,-3)
             pcall(function() punch1:FireServer() end)
             StatusLabel.Text = "Status: Training Bag1"
     
-            -- Wait until Bag1 finishes (goes false again)
             repeat task.wait() until not inUse1.Value or not training
-            task.wait(0.5)
-    
             if not training then break end
+    
+            -- Delay before switching to Bag2
+            task.wait(0.75)
     
             -------------------
             -- Bag2 cycle
             -------------------
-            -- Wait until Bag2 is free
             repeat task.wait() until not inUse2.Value or not training
             if not training then break end
     
-            -- Teleport + punch once
             root.CFrame = torso2.CFrame * CFrame.new(0,0,-3)
             pcall(function() punch2:FireServer() end)
             StatusLabel.Text = "Status: Training Bag2"
     
-            -- Wait until Bag2 finishes (goes false again)
             repeat task.wait() until not inUse2.Value or not training
-            task.wait(0.5)
+            if not training then break end
+    
+            -- Delay before switching back to Bag1
+            task.wait(0.75)
         end
     end
     
