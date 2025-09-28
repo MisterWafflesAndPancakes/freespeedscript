@@ -237,8 +237,12 @@ return function()
     ---------------------------------------------------
     -- Training Loop (with Kick on Stop option)
     ---------------------------------------------------
-        
+            
     local training = false
+    local currentBag = 1
+    
+    local punchbag1 = workspace:WaitForChild("Punch_Bag1")
+    local punchbag2 = workspace:WaitForChild("Punch_Bag2")
     
     local function trainingLoop()
         while training do
@@ -254,33 +258,40 @@ return function()
                 break
             end
     
-            local using = 0
-    
-            -- Try Punch_Bag1
-            if not punchbag1.In_Use.Value then
-                root.CFrame = punchbag1.Torso_Position.CFrame
-                task.wait(0.75)
-                pcall(function() punch1:FireServer() end)
-                StatusLabel.Text = "Status: Training Bag1"
-                using = 1
-    
-            -- Else try Punch_Bag2
-            elseif not punchbag2.In_Use.Value then
-                root.CFrame = punchbag2.Torso_Position.CFrame
-                task.wait(0.75)
-                pcall(function() punch2:FireServer() end)
-                StatusLabel.Text = "Status: Training Bag2"
-                using = 2
+            -- Pick bag
+            local bag, punch, bagName
+            if currentBag == 1 then
+                bag, punch, bagName = punchbag1, punch1, "Bag1"
+            else
+                bag, punch, bagName = punchbag2, punch2, "Bag2"
             end
     
-            -- Block until released from whichever bag you used
-            if using == 1 then
-                repeat task.wait(0.1) until punchbag1.Player.Value ~= Players.LocalPlayer.Name or not training
-            elseif using == 2 then
-                repeat task.wait(0.1) until punchbag2.Player.Value ~= Players.LocalPlayer.Name or not training
+            -- Wait until bag is free (poll every 0.2s)
+            while training and bag.In_Use.Value do
+                StatusLabel.Text = "Status: Waiting for " .. bagName .. " to be free..."
+                task.wait(0.2)
             end
+            if not training then break end
     
-            using = 0
+            -- Teleport + punch ONCE (only when bag is free)
+            if bag:FindFirstChild("Torso_Position") then
+                root.CFrame = bag.Torso_Position.CFrame * CFrame.new(0,0,-3)
+            end
+            pcall(function() punch:FireServer() end)
+            StatusLabel.Text = "Status: Training " .. bagName
+    
+            -- Wait until bag finishes (poll every 0.2s)
+            while training and bag.In_Use.Value do
+                StatusLabel.Text = "Status: " .. bagName .. " in use..."
+                task.wait(0.2)
+            end
+            if not training then break end
+    
+            -- Pause before switching
+            task.wait(0.75)
+    
+            -- Switch bag
+            currentBag = (currentBag == 1) and 2 or 1
         end
     end
     
@@ -289,23 +300,16 @@ return function()
     ---------------------------------------------------
     
     ToggleButton.MouseButton1Click:Connect(function()
-        -- Read stop level from the textbox if provided
         local val = tonumber(StopBox.Text)
         if val then STOP_LEVEL = val end
     
-        -- Flip the training flag
         training = not training
-    
         if training then
-            -- Starting training
             ToggleButton.Text = "Stop Training"
             ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 80, 160)
             StatusLabel.Text = "Status: Starting..."
-            
-            -- Spawn the loop in a separate thread so GUI stays responsive
             task.spawn(trainingLoop)
         else
-            -- Stopping training
             ToggleButton.Text = "Start Training"
             ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 40, 80)
             StatusLabel.Text = "Status: Idle"
