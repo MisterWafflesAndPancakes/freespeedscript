@@ -1,4 +1,4 @@
--- Smart Speed Training GUI (Arcade + Neon Blue + In_Use logic)
+-- ⚡ Smart Speed Training GUI (Arcade + Neon Blue + In_Use logic + Dynamic Stop Level + Drink Shake + Anti-AFK)
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -30,6 +30,11 @@ local speedXP = speedFolder:WaitForChild("XP")
 local toxicShakes = playerInfo:WaitForChild("Inventory"):WaitForChild("Drinks"):WaitForChild("T")
 
 ---------------------------------------------------
+-- CONFIG
+---------------------------------------------------
+local STOP_LEVEL = 50 -- default, can be changed via TextBox
+
+---------------------------------------------------
 -- GUI Setup (Arcade + Neon Blue)
 ---------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui")
@@ -37,7 +42,7 @@ ScreenGui.Name = "TrainingTracker"
 ScreenGui.Parent = game:GetService("CoreGui")
 
 local Frame = Instance.new("Frame")
-Frame.Size = UDim2.new(0, 260, 0, 160)
+Frame.Size = UDim2.new(0, 260, 0, 280)
 Frame.Position = UDim2.new(0.05, 0, 0.2, 0)
 Frame.BackgroundColor3 = Color3.fromRGB(10, 10, 30)
 Frame.BorderSizePixel = 2
@@ -61,10 +66,25 @@ local Title = makeLabel(5, "⚡ Training Tracker", Color3.fromRGB(0, 255, 255), 
 local SpeedLabel = makeLabel(40, "Speed Level: ...")
 local XPLabel = makeLabel(65, "Speed XP: ...", Color3.fromRGB(0, 255, 200))
 local ToxicLabel = makeLabel(90, "Toxic Shakes: ...", Color3.fromRGB(0, 180, 255))
+local StatusLabel = makeLabel(115, "Status: Idle", Color3.fromRGB(0, 255, 255))
 
--- Toggle button
+-- Stop level input
+local StopBox = Instance.new("TextBox")
+StopBox.Position = UDim2.new(0.1, 0, 0, 140)
+StopBox.Size = UDim2.new(0.8, 0, 0, 25)
+StopBox.BackgroundColor3 = Color3.fromRGB(0, 20, 40)
+StopBox.BorderSizePixel = 2
+StopBox.BorderColor3 = Color3.fromRGB(0, 200, 255)
+StopBox.TextColor3 = Color3.fromRGB(0, 255, 255)
+StopBox.PlaceholderText = "Stop Level (default 50)"
+StopBox.Font = Enum.Font.Arcade
+StopBox.TextSize = 18
+StopBox.Text = ""
+StopBox.Parent = Frame
+
+-- Training toggle button
 local ToggleButton = Instance.new("TextButton")
-ToggleButton.Position = UDim2.new(0.1, 0, 0, 120)
+ToggleButton.Position = UDim2.new(0.1, 0, 0, 170)
 ToggleButton.Size = UDim2.new(0.8, 0, 0, 30)
 ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 40, 80)
 ToggleButton.BorderSizePixel = 2
@@ -74,6 +94,32 @@ ToggleButton.Text = "Start Training"
 ToggleButton.Font = Enum.Font.Arcade
 ToggleButton.TextSize = 20
 ToggleButton.Parent = Frame
+
+-- Drink Shake toggle button
+local DrinkToggle = Instance.new("TextButton")
+DrinkToggle.Position = UDim2.new(0.1, 0, 0, 205)
+DrinkToggle.Size = UDim2.new(0.8, 0, 0, 30)
+DrinkToggle.BackgroundColor3 = Color3.fromRGB(0, 40, 80)
+DrinkToggle.BorderSizePixel = 2
+DrinkToggle.BorderColor3 = Color3.fromRGB(0, 200, 255)
+DrinkToggle.TextColor3 = Color3.fromRGB(0, 255, 255)
+DrinkToggle.Text = "Start Toxic Shake"
+DrinkToggle.Font = Enum.Font.Arcade
+DrinkToggle.TextSize = 18
+DrinkToggle.Parent = Frame
+
+-- Anti-AFK button
+local AntiAFKButton = Instance.new("TextButton")
+AntiAFKButton.Position = UDim2.new(0.1, 0, 0, 240)
+AntiAFKButton.Size = UDim2.new(0.8, 0, 0, 30)
+AntiAFKButton.BackgroundColor3 = Color3.fromRGB(0, 40, 80)
+AntiAFKButton.BorderSizePixel = 2
+AntiAFKButton.BorderColor3 = Color3.fromRGB(0, 200, 255)
+AntiAFKButton.TextColor3 = Color3.fromRGB(0, 255, 255)
+AntiAFKButton.Text = "Enable Anti-AFK"
+AntiAFKButton.Font = Enum.Font.Arcade
+AntiAFKButton.TextSize = 18
+AntiAFKButton.Parent = Frame
 
 ---------------------------------------------------
 -- GUI Update Logic
@@ -90,30 +136,40 @@ toxicShakes.Changed:Connect(updateGUI)
 updateGUI()
 
 ---------------------------------------------------
--- Smart Training Loop (respects In_Use)
+-- Training Loop
 ---------------------------------------------------
 local training = false
 
 local function waitUntilFree(inUseValue)
     while inUseValue.Value and training do
+        StatusLabel.Text = "Status: Waiting..."
         task.wait(0.2)
     end
 end
 
 local function trainingLoop()
     while training do
-        -- Try Bag1
+        -- Auto-stop check
+        if speedLevel.Value >= STOP_LEVEL then
+            training = false
+            ToggleButton.Text = "Start Training"
+            ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 40, 80)
+            StatusLabel.Text = "Status: Reached Level " .. STOP_LEVEL
+            break
+        end
+
         if not inUse1.Value then
             root.CFrame = torso1.CFrame
             punch1:FireServer()
+            StatusLabel.Text = "Status: Training Bag1"
             waitUntilFree(inUse1)
             task.wait(0.5)
         end
 
-        -- Try Bag2
         if not inUse2.Value then
             root.CFrame = torso2.CFrame
             punch2:FireServer()
+            StatusLabel.Text = "Status: Training Bag2"
             waitUntilFree(inUse2)
             task.wait(0.5)
         end
@@ -121,13 +177,55 @@ local function trainingLoop()
 end
 
 ToggleButton.MouseButton1Click:Connect(function()
+    local val = tonumber(StopBox.Text)
+    if val then STOP_LEVEL = val end
+
     training = not training
     if training then
         ToggleButton.Text = "Stop Training"
         ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 80, 160)
+        StatusLabel.Text = "Status: Starting..."
         task.spawn(trainingLoop)
     else
         ToggleButton.Text = "Start Training"
         ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 40, 80)
+        StatusLabel.Text = "Status: Idle"
     end
+end)
+
+---------------------------------------------------
+-- Drink Shake Toggle
+---------------------------------------------------
+local shakeActive = false
+local function shakeLoop()
+    while shakeActive do
+        game.ReplicatedStorage["Drink_Shake"]:InvokeServer("Toxic")
+        task.wait(1) -- adjust delay if you want faster/slower shakes
+    end
+end
+
+DrinkToggle.MouseButton1Click:Connect(function()
+    shakeActive = not shakeActive
+    if shakeActive then
+        DrinkToggle.Text = "Stop Toxic Shake"
+        DrinkToggle.BackgroundColor3 = Color3.fromRGB(0, 80, 160)
+        task.spawn(shakeLoop)
+    else
+        DrinkToggle.Text = "Start Toxic Shake"
+        DrinkToggle.BackgroundColor3 = Color3.fromRGB(0, 40, 80)
+    end
+end)
+
+---------------------------------------------------
+-- Anti-AFK Button
+---------------------------------------------------
+AntiAFKButton.MouseButton1Click:Connect(function()
+    local VirtualUser = game:service("VirtualUser")
+    game:service("Players").LocalPlayer.Idled:connect(function()
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton2(Vector2.new())
+    end)
+    AntiAFKButton.Text = "Anti-AFK Enabled"
+    AntiAFKButton.BackgroundColor3 = Color3.fromRGB(0, 80, 160)
+    AntiAFKButton.Active = false -- disable further presses
 end)
