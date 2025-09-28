@@ -1,5 +1,7 @@
 return function()
-    -- ⚡ Advanced Speed Training GUI (Arcade + Neon Blue + Kick on Stop + Drag + Anti-AFK + Toxic Shake)
+    ---------------------------------------------------
+    -- Advanced Speed 
+    ---------------------------------------------------
     
     local Players = game:GetService("Players")
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -33,11 +35,13 @@ return function()
     ---------------------------------------------------
     -- CONFIG
     ---------------------------------------------------
+    
     local STOP_LEVEL = 450 -- default, can be changed via TextBox
     
     ---------------------------------------------------
     -- GUI Setup (Arcade + Neon Blue)
     ---------------------------------------------------
+    
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "TrainingTracker"
     ScreenGui.Parent = game:GetService("CoreGui")
@@ -101,7 +105,7 @@ return function()
         return lbl
     end
     
-    local Title = makeLabel(5, "⚡ Advanced Speed!", Color3.fromRGB(0, 255, 255), 22)
+    local Title = makeLabel(5, "⚡ Advanced Speed! ⚡", Color3.fromRGB(0, 255, 255), 22)
     local SpeedLabel = makeLabel(40, "Speed Level: ...")
     local XPLabel = makeLabel(65, "Speed XP: ...", Color3.fromRGB(0, 255, 200))
     local ToxicLabel = makeLabel(90, "Toxic Shakes: ...", Color3.fromRGB(0, 180, 255))
@@ -188,6 +192,7 @@ return function()
     ---------------------------------------------------
     -- GUI Update Logic
     ---------------------------------------------------
+    
     local function updateGUI()
         SpeedLabel.Text = "Speed Level: " .. tostring(speedLevel.Value)
         XPLabel.Text = "Speed XP: " .. tostring(speedXP.Value)
@@ -215,6 +220,7 @@ return function()
     ---------------------------------------------------
     -- Helper: Wait Until Free With Timeout
     ---------------------------------------------------
+    
     local function waitUntilFreeWithTimeout(inUseValue, bagName, timeout)
         local start = tick()
         while inUseValue.Value and training do
@@ -228,14 +234,13 @@ return function()
         return training
     end
     
-        ---------------------------------------------------
-        -- Training Loop (with Kick on Stop option)
-        ---------------------------------------------------
-    local training = false
-    
+    ---------------------------------------------------
+    -- Training Loop (with Kick on Stop option)
+    ---------------------------------------------------
+
     local function trainingLoop()
         while training do
-            -- Auto-stop check
+            -- Stop check
             if speedLevel.Value >= STOP_LEVEL then
                 training = false
                 ToggleButton.Text = "Start Training"
@@ -247,58 +252,32 @@ return function()
                 break
             end
     
-            -------------------
-            -- Bag1 cycle
-            -------------------
-            -- Wait until Bag1 is free
-            while inUse1.Value and training do
-                StatusLabel.Text = "Status: Waiting for Bag1"
-                task.wait(0.2)
-            end
-    
-            -- Now wait for it to become true (while waiting, teleport + punch)
-            while not inUse1.Value and training do
-                root.CFrame = torso1.CFrame
-                pcall(function() punch1:FireServer() end)
-                StatusLabel.Text = "Status: Using Bag1"
-                task.wait(0.2)
-            end
-    
-            -- While it's true, wait until it goes false again
-            while inUse1.Value and training do
-                task.wait(0.2)
-            end
-    
-            task.wait(0.5) -- small cooldown
+            -- Bag1
+            while inUse1.Value and training do task.wait(0.2) end
+            if not training then break end
+            root.CFrame = torso1.CFrame * CFrame.new(0,0,-3)
+            pcall(function() punch1:FireServer() end)
+            StatusLabel.Text = "Status: Training Bag1"
+            while inUse1.Value and training do task.wait(0.2) end
+            task.wait(0.5)
     
             if not training then break end
     
-            -------------------
-            -- Bag2 cycle
-            -------------------
-            while inUse2.Value and training do
-                StatusLabel.Text = "Status: Waiting for Bag2"
-                task.wait(0.2)
-            end
-    
-            while not inUse2.Value and training do
-                root.CFrame = torso2.CFrame
-                pcall(function() punch2:FireServer() end)
-                StatusLabel.Text = "Status: Using Bag2"
-                task.wait(0.2)
-            end
-    
-            while inUse2.Value and training do
-                task.wait(0.2)
-            end
-    
-            task.wait(0.75)
+            -- Bag2
+            while inUse2.Value and training do task.wait(0.2) end
+            if not training then break end
+            root.CFrame = torso2.CFrame * CFrame.new(0,0,-3)
+            pcall(function() punch2:FireServer() end)
+            StatusLabel.Text = "Status: Training Bag2"
+            while inUse2.Value and training do task.wait(0.2) end
+            task.wait(0.5)
         end
     end
     
     ---------------------------------------------------
     -- Training Toggle Button Logic
     ---------------------------------------------------
+    
     ToggleButton.MouseButton1Click:Connect(function()
         local val = tonumber(StopBox.Text)
         if val then STOP_LEVEL = val end
@@ -319,6 +298,7 @@ return function()
     ---------------------------------------------------
     -- Drink Shake Toggle
     ---------------------------------------------------
+    
     local shakeActive = false
     local function shakeLoop()
         while shakeActive do
@@ -342,6 +322,7 @@ return function()
     ---------------------------------------------------
     -- Anti-AFK Button
     ---------------------------------------------------
+    
     AntiAFKButton.MouseButton1Click:Connect(function()
         local VirtualUser = game:service("VirtualUser")
         game:service("Players").LocalPlayer.Idled:connect(function()
