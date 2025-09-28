@@ -255,30 +255,32 @@ return function()
             end
     
             -- Pick current bag
-            local b, torso, punch, inUse
+            local torso, punch, inUse, bagName
             if currentBag == 1 then
-                b, torso, punch, inUse = "Bag1", torso1, punch1, inUse1
+                torso, punch, inUse, bagName = torso1, punch1, inUse1, "Bag1"
             else
-                b, torso, punch, inUse = "Bag2", torso2, punch2, inUse2
+                torso, punch, inUse, bagName = torso2, punch2, inUse2, "Bag2"
             end
     
-            -- Wait until bag is free
+            -- Wait until this bag is free
             repeat task.wait() until not inUse.Value or not training
             if not training then break end
     
             -- Teleport + punch ONCE
-            root.CFrame = torso.CFrame * CFrame.new(0,0,-3)
+            if torso and torso.Parent then
+                root.CFrame = torso.CFrame * CFrame.new(0,0,-3)
+            end
             pcall(function() punch:FireServer() end)
-            StatusLabel.Text = "Status: Training " .. b
+            StatusLabel.Text = "Status: Training " .. bagName
     
-            -- Wait until bag finishes (goes false again)
+            -- Wait until the bag finishes (goes false again)
             repeat task.wait() until not inUse.Value or not training
             if not training then break end
     
             -- Pause before switching
             task.wait(0.75)
     
-            -- Switch bag
+            -- Switch to the other bag
             currentBag = (currentBag == 1) and 2 or 1
         end
     end
