@@ -1,5 +1,5 @@
 return function()
-    -- ⚡ Smart Speed Training GUI (Arcade + Neon Blue + In_Use logic + Dynamic Stop Level + Drink Shake + Anti-AFK + Drag Support)
+    -- ⚡ Advanced Speed Training GUI (Arcade + Neon Blue + Kick on Stop + Drag + Anti-AFK + Toxic Shake)
     
     local Players = game:GetService("Players")
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -29,7 +29,6 @@ return function()
     local speedFolder = statsFolder:WaitForChild("Speed")
     local speedLevel = speedFolder:WaitForChild("Level")
     local speedXP = speedFolder:WaitForChild("XP")
-    local toxicShakes = playerInfo:WaitForChild("Inventory"):WaitForChild("Drinks"):WaitForChild("T")
     
     ---------------------------------------------------
     -- CONFIG
@@ -44,19 +43,18 @@ return function()
     ScreenGui.Parent = game:GetService("CoreGui")
     
     local Frame = Instance.new("Frame")
-    Frame.Size = UDim2.new(0, 260, 0, 310) -- increased height to fit new button
+    Frame.Size = UDim2.new(0, 260, 0, 310)
     Frame.Position = UDim2.new(0.05, 0, 0.2, 0)
     Frame.BackgroundColor3 = Color3.fromRGB(10, 10, 30)
     Frame.BorderSizePixel = 2
     Frame.BorderColor3 = Color3.fromRGB(0, 200, 255)
-    Frame.Active = true -- required for dragging
-    Frame.Draggable = false -- we'll implement custom drag
+    Frame.Active = true
+    Frame.Draggable = false
     Frame.Parent = ScreenGui
     
-    -- Drag function (works PC + Mobile)
+    -- Drag function (PC + Mobile)
     do
         local dragging, dragInput, dragStart, startPos
-    
         local function update(input)
             local delta = input.Position - dragStart
             Frame.Position = UDim2.new(
@@ -64,14 +62,12 @@ return function()
                 startPos.Y.Scale, startPos.Y.Offset + delta.Y
             )
         end
-    
         Frame.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1
             or input.UserInputType == Enum.UserInputType.Touch then
                 dragging = true
                 dragStart = input.Position
                 startPos = Frame.Position
-    
                 input.Changed:Connect(function()
                     if input.UserInputState == Enum.UserInputState.End then
                         dragging = false
@@ -79,14 +75,12 @@ return function()
                 end)
             end
         end)
-    
         Frame.InputChanged:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseMovement
             or input.UserInputType == Enum.UserInputType.Touch then
                 dragInput = input
             end
         end)
-    
         UserInputService.InputChanged:Connect(function(input)
             if input == dragInput and dragging then
                 update(input)
@@ -107,7 +101,7 @@ return function()
         return lbl
     end
     
-    local Title = makeLabel(5, "Speed Training + Complete Tracker", Color3.fromRGB(0, 255, 255), 22)
+    local Title = makeLabel(5, "⚡ Advanced Speed!", Color3.fromRGB(0, 255, 255), 22)
     local SpeedLabel = makeLabel(40, "Speed Level: ...")
     local XPLabel = makeLabel(65, "Speed XP: ...", Color3.fromRGB(0, 255, 200))
     local ToxicLabel = makeLabel(90, "Toxic Shakes: ...", Color3.fromRGB(0, 180, 255))
@@ -219,8 +213,26 @@ return function()
     updateGUI()
     
     ---------------------------------------------------
+    -- Helper: Wait Until Free With Timeout
+    ---------------------------------------------------
+    local function waitUntilFreeWithTimeout(inUseValue, bagName, timeout)
+        local start = tick()
+        while inUseValue.Value and training do
+            StatusLabel.Text = "Status: Waiting for " .. bagName
+            task.wait(0.2)
+            if tick() - start > timeout then
+                StatusLabel.Text = "Status: Timeout on " .. bagName .. ", skipping..."
+                return false
+            end
+        end
+        return training
+    end
+    
+    ---------------------------------------------------
     -- Training Loop (with Kick on Stop option)
     ---------------------------------------------------
+    local training = false
+    
     local function trainingLoop()
         while training do
             -- Auto-stop check
@@ -245,7 +257,6 @@ return function()
                 punch1:FireServer()
                 StatusLabel.Text = "Status: Training Bag1"
     
-                -- Wait until Bag1 finishes being used
                 waitUntilFreeWithTimeout(inUse1, "Bag1", 10)
                 task.wait(0.5)
             end
@@ -260,12 +271,31 @@ return function()
                 punch2:FireServer()
                 StatusLabel.Text = "Status: Training Bag2"
     
-                -- Wait until Bag2 finishes being used
                 waitUntilFreeWithTimeout(inUse2, "Bag2", 10)
                 task.wait(0.5)
             end
         end
     end
+    
+    ---------------------------------------------------
+    -- Training Toggle Button Logic
+    ---------------------------------------------------
+    ToggleButton.MouseButton1Click:Connect(function()
+        local val = tonumber(StopBox.Text)
+        if val then STOP_LEVEL = val end
+    
+        training = not training
+        if training then
+            ToggleButton.Text = "Stop Training"
+            ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 80, 160)
+            StatusLabel.Text = "Status: Starting..."
+            task.spawn(trainingLoop)
+        else
+            ToggleButton.Text = "Start Training"
+            ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 40, 80)
+            StatusLabel.Text = "Status: Idle"
+        end
+    end)
     
     ---------------------------------------------------
     -- Drink Shake Toggle
