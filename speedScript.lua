@@ -1,7 +1,8 @@
--- ⚡ Smart Speed Training GUI (Arcade + Neon Blue + In_Use logic + Dynamic Stop Level + Drink Shake + Anti-AFK)
+-- ⚡ Smart Speed Training GUI (Arcade + Neon Blue + In_Use logic + Dynamic Stop Level + Drink Shake + Anti-AFK + Drag Support)
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local root = character:WaitForChild("HumanoidRootPart")
@@ -47,7 +48,50 @@ Frame.Position = UDim2.new(0.05, 0, 0.2, 0)
 Frame.BackgroundColor3 = Color3.fromRGB(10, 10, 30)
 Frame.BorderSizePixel = 2
 Frame.BorderColor3 = Color3.fromRGB(0, 200, 255)
+Frame.Active = true -- required for dragging
+Frame.Draggable = false -- we'll implement custom drag
 Frame.Parent = ScreenGui
+
+-- Drag function (works PC + Mobile)
+do
+    local dragging, dragInput, dragStart, startPos
+
+    local function update(input)
+        local delta = input.Position - dragStart
+        Frame.Position = UDim2.new(
+            startPos.X.Scale, startPos.X.Offset + delta.X,
+            startPos.Y.Scale, startPos.Y.Offset + delta.Y
+        )
+    end
+
+    Frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = Frame.Position
+
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    Frame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement
+        or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            update(input)
+        end
+    end)
+end
 
 local function makeLabel(yPos, text, color, size)
     local lbl = Instance.new("TextLabel")
@@ -140,14 +184,8 @@ updateGUI()
 ---------------------------------------------------
 local training = false
 
-local function waitUntilFree(inUseValue)
-    while inUseValue.Value and training do
-        StatusLabel.Text = "Status: Waiting..."
-        task.wait(0.2)
-    end
-end
-
 local function trainingLoop()
+    local currentBag = 1 -- start with Bag1
     while training do
         -- Auto-stop check
         if speedLevel.Value >= STOP_LEVEL then
@@ -158,21 +196,30 @@ local function trainingLoop()
             break
         end
 
-        if not inUse1.Value then
-            root.CFrame = torso1.CFrame
-            punch1:FireServer()
-            StatusLabel.Text = "Status: Training Bag1"
-            waitUntilFree(inUse1)
-            task.wait(0.5)
+        -- Pick bag references dynamically
+        local bag = (currentBag == 1) and bag1 or bag2
+        local torso = (currentBag == 1) and torso1 or torso2
+        local inUse = (currentBag == 1) and inUse1 or inUse2
+        local punch = (currentBag == 1) and punch1 or punch2
+
+        -- Wait until bag is free
+        while inUse.Value and training do
+            StatusLabel.Text = "Status: Waiting for Bag" .. currentBag
+            task.wait(0.2)
         end
 
-        if not inUse2.Value then
-            root.CFrame = torso2.CFrame
-            punch2:FireServer()
-            StatusLabel.Text = "Status: Training Bag2"
-            waitUntilFree(inUse2)
-            task.wait(0.5)
-        end
+        if not training then break end
+
+        -- Teleport + fire
+        root.CFrame = torso.CFrame
+        punch:FireServer()
+        StatusLabel.Text = "Status: Training Bag" .. currentBag
+
+        -- Small cooldown before switching
+        task.wait(1)
+
+        -- Switch bag for next cycle
+        currentBag = (currentBag == 1) and 2 or 1
     end
 end
 
