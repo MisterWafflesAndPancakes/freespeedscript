@@ -238,6 +238,16 @@ return function()
     -- Training Loop (with Kick on Stop option)
     ---------------------------------------------------
     
+    local training = false
+    
+    -- Bundle bag refs so we can toggle cleanly
+    local bags = {
+        { name = "Bag1", inUse = inUse1, torso = torso1, punch = punch1 },
+        { name = "Bag2", inUse = inUse2, torso = torso2, punch = punch2 },
+    }
+    
+    local currentBag = 1
+    
     local function trainingLoop()
         while training do
             -- Stop check
@@ -252,60 +262,35 @@ return function()
                 break
             end
     
-            -------------------
-            -- Bag1 cycle
-            -------------------
-            repeat task.wait() until not inUse1.Value or not training
+            local b = bags[currentBag]
+    
+            -- Wait until current bag is free
+            while b.inUse.Value and training do
+                StatusLabel.Text = "Status: Waiting for " .. b.name
+                task.wait(0.2)
+            end
             if not training then break end
     
-            root.CFrame = torso1.CFrame * CFrame.new(0,0,-3)
-            pcall(function() punch1:FireServer() end)
-            StatusLabel.Text = "Status: Training Bag1"
+            -- Teleport + use ONCE (this sets In_Use = true)
+            if b.torso and b.torso.Parent then
+                root.CFrame = b.torso.CFrame * CFrame.new(0, 0, -3)
+            end
+            pcall(function() b.punch:FireServer() end)
+            StatusLabel.Text = "Status: Training " .. b.name
     
-            repeat task.wait() until not inUse1.Value or not training
+            -- Wait until it finishes (In_Use goes false again)
+            while b.inUse.Value and training do
+                task.wait(0.2)
+            end
             if not training then break end
     
-            -- Delay before switching to Bag2
+            -- Pause before switching
             task.wait(0.75)
     
-            -------------------
-            -- Bag2 cycle
-            -------------------
-            repeat task.wait() until not inUse2.Value or not training
-            if not training then break end
-    
-            root.CFrame = torso2.CFrame * CFrame.new(0,0,-3)
-            pcall(function() punch2:FireServer() end)
-            StatusLabel.Text = "Status: Training Bag2"
-    
-            repeat task.wait() until not inUse2.Value or not training
-            if not training then break end
-    
-            -- Delay before switching back to Bag1
-            task.wait(0.75)
+            -- Switch to the other bag (but only after finishing)
+            currentBag = (currentBag == 1) and 2 or 1
         end
     end
-    
-    ---------------------------------------------------
-    -- Training Toggle Button Logic
-    ---------------------------------------------------
-    
-    ToggleButton.MouseButton1Click:Connect(function()
-        local val = tonumber(StopBox.Text)
-        if val then STOP_LEVEL = val end
-    
-        training = not training
-        if training then
-            ToggleButton.Text = "Stop Training"
-            ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 80, 160)
-            StatusLabel.Text = "Status: Starting..."
-            task.spawn(trainingLoop)
-        else
-            ToggleButton.Text = "Start Training"
-            ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 40, 80)
-            StatusLabel.Text = "Status: Idle"
-        end
-    end)
     
     ---------------------------------------------------
     -- Drink Shake Toggle
