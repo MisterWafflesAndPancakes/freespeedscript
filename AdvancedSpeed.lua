@@ -240,6 +240,7 @@ return function()
             
     local training = false
     local currentBag = 1
+    local active = false -- NEW: tracks if we’re already using a bag
     
     local punchbag1 = workspace:WaitForChild("Punch_Bag1")
     local punchbag2 = workspace:WaitForChild("Punch_Bag2")
@@ -266,32 +267,29 @@ return function()
                 bag, punch, bagName = punchbag2, punch2, "Bag2"
             end
     
-            -- Wait until bag is free (poll every 0.2s)
-            while training and bag.In_Use.Value do
-                StatusLabel.Text = "Status: Waiting for " .. bagName .. " to be free..."
-                task.wait(0.2)
+            -- Only act if we’re not already active
+            if not active then
+                -- Wait until bag is free
+                if not bag.In_Use.Value then
+                    -- Teleport + punch ONCE
+                    if bag:FindFirstChild("Torso_Position") then
+                        root.CFrame = bag.Torso_Position.CFrame * CFrame.new(0,0,-3)
+                    end
+                    pcall(function() punch:FireServer() end)
+                    StatusLabel.Text = "Status: Training " .. bagName
+                    active = true -- mark as busy
+                end
+            else
+                -- Already active: wait until bag finishes
+                if not bag.In_Use.Value then
+                    -- Bag finished
+                    active = false
+                    task.wait(0.75) -- pause before switching
+                    currentBag = (currentBag == 1) and 2 or 1
+                end
             end
-            if not training then break end
     
-            -- Teleport + punch ONCE (only when bag is free)
-            if bag:FindFirstChild("Torso_Position") then
-                root.CFrame = bag.Torso_Position.CFrame * CFrame.new(0,0,-3)
-            end
-            pcall(function() punch:FireServer() end)
-            StatusLabel.Text = "Status: Training " .. bagName
-    
-            -- Wait until bag finishes (poll every 0.2s)
-            while training and bag.In_Use.Value do
-                StatusLabel.Text = "Status: " .. bagName .. " in use..."
-                task.wait(0.2)
-            end
-            if not training then break end
-    
-            -- Pause before switching
-            task.wait(0.75)
-    
-            -- Switch bag
-            currentBag = (currentBag == 1) and 2 or 1
+            task.wait(0.2) -- poll every 0.2s
         end
     end
     
