@@ -284,6 +284,34 @@ return function()
     end
     
     ---------------------------------------------------
+    -- Training Toggle Button Logic
+    ---------------------------------------------------
+    
+    ToggleButton.MouseButton1Click:Connect(function()
+        -- Read stop level from the textbox if provided
+        local val = tonumber(StopBox.Text)
+        if val then STOP_LEVEL = val end
+    
+        -- Flip the training flag
+        training = not training
+    
+        if training then
+            -- Starting training
+            ToggleButton.Text = "Stop Training"
+            ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 80, 160)
+            StatusLabel.Text = "Status: Starting..."
+            
+            -- Spawn the loop in a separate thread so GUI stays responsive
+            task.spawn(trainingLoop)
+        else
+            -- Stopping training
+            ToggleButton.Text = "Start Training"
+            ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 40, 80)
+            StatusLabel.Text = "Status: Idle"
+        end
+    end)
+
+    ---------------------------------------------------
     -- Drink Shake Toggle
     ---------------------------------------------------
     
