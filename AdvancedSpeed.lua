@@ -238,14 +238,6 @@ return function()
     -- Training Loop (with Kick on Stop option)
     ---------------------------------------------------
     
-    local training = false
-    
-    -- Bundle bag refs so we can toggle cleanly
-    local bags = {
-        { name = "Bag1", inUse = inUse1, torso = torso1, punch = punch1 },
-        { name = "Bag2", inUse = inUse2, torso = torso2, punch = punch2 },
-    }
-    
     local currentBag = 1
     
     local function trainingLoop()
@@ -262,32 +254,31 @@ return function()
                 break
             end
     
-            local b = bags[currentBag]
-    
-            -- Wait until current bag is free
-            while b.inUse.Value and training do
-                StatusLabel.Text = "Status: Waiting for " .. b.name
-                task.wait(0.2)
+            -- Pick current bag
+            local b, torso, punch, inUse
+            if currentBag == 1 then
+                b, torso, punch, inUse = "Bag1", torso1, punch1, inUse1
+            else
+                b, torso, punch, inUse = "Bag2", torso2, punch2, inUse2
             end
+    
+            -- Wait until bag is free
+            repeat task.wait() until not inUse.Value or not training
             if not training then break end
     
-            -- Teleport + use ONCE (this sets In_Use = true)
-            if b.torso and b.torso.Parent then
-                root.CFrame = b.torso.CFrame * CFrame.new(0, 0, -3)
-            end
-            pcall(function() b.punch:FireServer() end)
-            StatusLabel.Text = "Status: Training " .. b.name
+            -- Teleport + punch ONCE
+            root.CFrame = torso.CFrame * CFrame.new(0,0,-3)
+            pcall(function() punch:FireServer() end)
+            StatusLabel.Text = "Status: Training " .. b
     
-            -- Wait until it finishes (In_Use goes false again)
-            while b.inUse.Value and training do
-                task.wait(0.2)
-            end
+            -- Wait until bag finishes (goes false again)
+            repeat task.wait() until not inUse.Value or not training
             if not training then break end
     
             -- Pause before switching
             task.wait(0.75)
     
-            -- Switch to the other bag (but only after finishing)
+            -- Switch bag
             currentBag = (currentBag == 1) and 2 or 1
         end
     end
