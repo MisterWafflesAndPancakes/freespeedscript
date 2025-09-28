@@ -237,8 +237,8 @@ return function()
     ---------------------------------------------------
     -- Training Loop (with Kick on Stop option)
     ---------------------------------------------------
-    
-    local currentBag = 1
+        
+    local training = false
     
     local function trainingLoop()
         while training do
@@ -254,34 +254,33 @@ return function()
                 break
             end
     
-            -- Pick current bag
-            local torso, punch, inUse, bagName
-            if currentBag == 1 then
-                torso, punch, inUse, bagName = torso1, punch1, inUse1, "Bag1"
-            else
-                torso, punch, inUse, bagName = torso2, punch2, inUse2, "Bag2"
+            local using = 0
+    
+            -- Try Punch_Bag1
+            if not punchbag1.In_Use.Value then
+                root.CFrame = punchbag1.Torso_Position.CFrame
+                task.wait(0.75)
+                pcall(function() punch1:FireServer() end)
+                StatusLabel.Text = "Status: Training Bag1"
+                using = 1
+    
+            -- Else try Punch_Bag2
+            elseif not punchbag2.In_Use.Value then
+                root.CFrame = punchbag2.Torso_Position.CFrame
+                task.wait(0.75)
+                pcall(function() punch2:FireServer() end)
+                StatusLabel.Text = "Status: Training Bag2"
+                using = 2
             end
     
-            -- Wait until this bag is free
-            repeat task.wait() until not inUse.Value or not training
-            if not training then break end
-    
-            -- Teleport + punch ONCE
-            if torso and torso.Parent then
-                root.CFrame = torso.CFrame * CFrame.new(0,0,-3)
+            -- Block until released from whichever bag you used
+            if using == 1 then
+                repeat task.wait(0.1) until punchbag1.Player.Value ~= Players.LocalPlayer.Name or not training
+            elseif using == 2 then
+                repeat task.wait(0.1) until punchbag2.Player.Value ~= Players.LocalPlayer.Name or not training
             end
-            pcall(function() punch:FireServer() end)
-            StatusLabel.Text = "Status: Training " .. bagName
     
-            -- Wait until the bag finishes (goes false again)
-            repeat task.wait() until not inUse.Value or not training
-            if not training then break end
-    
-            -- Pause before switching
-            task.wait(0.75)
-    
-            -- Switch to the other bag
-            currentBag = (currentBag == 1) and 2 or 1
+            using = 0
         end
     end
     
